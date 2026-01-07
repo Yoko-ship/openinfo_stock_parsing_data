@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import requests
+import re
 
 user_input = input("Названия компании: ")
 
@@ -24,9 +25,51 @@ div_element = wait.until(
     EC.presence_of_element_located((By.CSS_SELECTOR,'.absolute.z-10.w-full.mt-1.bg-white.border.border-default.rounded-xl.shadow-lg.max-h-60.overflow-y-auto.transition-transform.transition-opacity.duration-200.ease-in-out.opacity-100.translate-y-0'))
 )
 div_element.click()
+
+time.sleep(7)
+overall_url = []
+
+for request in driver.requests:
+    if request.response:
+        content_type = request.response.headers.get("Content-Type", "")
+        if "application/json" in content_type or "api" in request.url.lower():
+            overall_url.append(request.url)
+
+pattern = re.compile(
+    r"^https://new-api\.openinfo\.uz/api/v2/organizations/organizations/\d+/?$"
+)
+
+filtered_overall = [url for url in overall_url if pattern.match(url)]
+
+overall_balance_url = filtered_overall[0]
+first_response = requests.get(overall_balance_url)
+price_response = first_response.json()
+
+
+
+shares = price_response['uzse_info']
+overall_obligations = {
+    "Общее количество акций":0,
+    "Обычные акции": 0,
+    "Привилегированные акции": 0,
+}
+
+for share in shares['shares']:
+    if share['type'] == "Простые акции":
+        overall_obligations["Обычные акции"] += share['list_shrs']
+        overall_obligations["Общее количество акций"] += share['total_sum']
+
+    elif share['type'] == "Привилегированные акции":
+        overall_obligations["Привилегированные акции"] += share['list_shrs']
+
+
+
+
+
 balanse_otchet = wait.until(
     EC.presence_of_element_located((By.XPATH,'//button[text()="Балансовый отчет"]'))
 )
+
 balanse_otchet.click()
 time.sleep(0.5)
 
@@ -34,13 +77,19 @@ time.sleep(0.5)
 balance_url = []
 effect_url = []
 
+
 for request in driver.requests:
     if request.response:
         content_type = request.response.headers.get("Content-Type", "")
         if "application/json" in content_type or "api" in request.url.lower():
             balance_url.append(request.url)
 
-balance_report = balance_url
+pattern_balance = re.compile(
+     r"^https://new-api\.openinfo\.uz/api/v2/reports/accounting-report/\d+/\?accounting_type=form1&report_type=annual$"
+)
+filtered_balance_url = [u for u in balance_url if pattern_balance.match(u)]
+
+
 effect_otchet = wait.until(
     EC.presence_of_element_located((By.XPATH,'//button[text()="Показатели эффективности"]'))
 )
@@ -54,8 +103,13 @@ for request in driver.requests:
             effect_url.append(request.url)
 
 driver.quit()
-balance_api = balance_url[-1]
-efficient_api = effect_url[-1]
+pattern_efficient = re.compile(
+    r"^https://new-api\.openinfo\.uz/api/v2/reports/financial_indicators/\?organization_id=\d+$"
+)
+filtered_efficient_url = [f for f in effect_url if pattern_efficient.match(f)]
+
+balance_api = filtered_balance_url[0]
+efficient_api = filtered_efficient_url[0]
 
 def get_value(df, title, col, i, default=0):
     values = df.loc[df["title"] == title, col].values
@@ -154,5 +208,6 @@ for efficient_item in efficient_data['results']:
     
 
 all_data.update(efficient_flat_data)
+all_data.update(overall_obligations)
 all_frames = pd.DataFrame(all_data)
 all_frames.to_excel("data.xlsx")
