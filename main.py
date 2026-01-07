@@ -10,8 +10,8 @@ import requests
 user_input = input("Названия компании: ")
 
 options = webdriver.ChromeOptions()
-options.add_argument("--headless")            # включаем headless режим
-options.add_argument("--window-size=1920,1080")  # задаём размер окна
+options.add_argument("--headless")            
+options.add_argument("--window-size=1920,1080")  
 driver = webdriver.Chrome(options=options)
 driver.get("https://new.openinfo.uz/ru?tab=facts&page=1")
 wait = WebDriverWait(driver,10)
@@ -96,20 +96,24 @@ all_data = {
     "Нераспределенная прибыль (непокрытый убыток) (8700)":[],
     "Долгосрочные обязательства, всего (стр.500+520+530+540+550+560+570+580+590)":[],
     "ВСЕГО по активу баланса 130+390":[],
+    "Текущие обязательства, всего (стр.610+630+640+650+660+670+680+690+700+710+720+ +730+740+750+760)":[],
+    "ИТОГО ПО II РАЗДЕЛУ (стр. 490+600)":[],
 }
 
 for i in range(0,10):
     try:
-
+        # something = df.loc[df["title"] == "ИТОГО ПО II РАЗДЕЛУ (стр. 490+600)", "value2"].values[i]
+        # print(something)
         nerasp_income = get_value(df,"Нераспределенная прибыль (непокрытый убыток) (8700)","value2",i)
-        # df.loc[df["title"] == "Нераспределенная прибыль (непокрытый убыток) (8700)", "value2"].values[i]
         dolg = get_value(df,"Долгосрочные обязательства, всего (стр.500+520+530+540+550+560+570+580+590)","value2",i) 
-        # df.loc[df["title"] == "Долгосрочные обязательства, всего (стр.500+520+530+540+550+560+570+580+590)", "value2"].values[i]
         vsego_activ =  get_value(df,"ВСЕГО по активу баланса 130+390","value2",i)
-        # df.loc[df["title"] == "ВСЕГО по активу баланса 130+390", "value2"].values[i]
+        current_obligations = get_value(df,"Текущие обязательства, всего (стр.610+630+640+650+660+670+680+690+700+710+720+ +730+740+750+760)","value2",i)
+        second_chapter_res = get_value(df,"ИТОГО ПО II РАЗДЕЛУ (стр. 490+600)","value2",i)
         all_data["Нераспределенная прибыль (непокрытый убыток) (8700)"].append(nerasp_income)
         all_data["Долгосрочные обязательства, всего (стр.500+520+530+540+550+560+570+580+590)"].append(dolg)
         all_data["ВСЕГО по активу баланса 130+390"].append(vsego_activ)
+        all_data["Текущие обязательства, всего (стр.610+630+640+650+660+670+680+690+700+710+720+ +730+740+750+760)"].append(current_obligations)
+        all_data["ИТОГО ПО II РАЗДЕЛУ (стр. 490+600)"].append(second_chapter_res)
     except Exception:
         continue
 
@@ -135,7 +139,6 @@ efficient_flat_data = {
     "ROE":[]
 }
 for efficient_item in efficient_data['results']:  
-    print(efficient_item)
     efficient_flat_data["Чистая Прибыль"].append(efficient_item.get("net_profit_margin"))
     efficient_flat_data["Отношение долга к собственному капиталу"].append(efficient_item.get("debt_to_equity_ratio"))
     efficient_flat_data["Маржа EBIT"].append(efficient_item.get("ebit_margin"))
