@@ -7,6 +7,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import requests
 import re
+from analyz import make_analyz
+from styling import styling
 
 user_input = input("Названия компании: ")
 
@@ -20,6 +22,7 @@ input_element = wait.until(
     EC.presence_of_element_located((By.CSS_SELECTOR,'input[placeholder="Поиск"]'))
 )
 
+time.sleep(0.5)
 input_element.send_keys(user_input)
 div_element = wait.until(
     EC.presence_of_element_located((By.CSS_SELECTOR,'.absolute.z-10.w-full.mt-1.bg-white.border.border-default.rounded-xl.shadow-lg.max-h-60.overflow-y-auto.transition-transform.transition-opacity.duration-200.ease-in-out.opacity-100.translate-y-0'))
@@ -156,8 +159,6 @@ all_data = {
 
 for i in range(0,10):
     try:
-        # something = df.loc[df["title"] == "ИТОГО ПО II РАЗДЕЛУ (стр. 490+600)", "value2"].values[i]
-        # print(something)
         nerasp_income = get_value(df,"Нераспределенная прибыль (непокрытый убыток) (8700)","value2",i)
         dolg = get_value(df,"Долгосрочные обязательства, всего (стр.500+520+530+540+550+560+570+580+590)","value2",i) 
         vsego_activ =  get_value(df,"ВСЕГО по активу баланса 130+390","value2",i)
@@ -210,4 +211,10 @@ for efficient_item in efficient_data['results']:
 all_data.update(efficient_flat_data)
 all_data.update(overall_obligations)
 all_frames = pd.DataFrame(all_data)
-all_frames.to_excel("data.xlsx")
+result = make_analyz(all_frames)
+with pd.ExcelWriter("data.xlsx",engine='openpyxl') as writer:
+    all_frames.to_excel(writer,sheet_name="Sheet1",index=False)
+    pd.DataFrame().to_excel(writer,sheet_name="ai_sheet",index=False)
+
+
+styling("Sheet1","ai_sheet",result)
